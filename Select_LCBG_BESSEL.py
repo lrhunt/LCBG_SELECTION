@@ -12,6 +12,11 @@
 #	kcorrect.load_filters('/home/lrhunt/programs/kcorrect/data/templates/BESSEL_B.dat')
 #	kcorrect.load_filters('/home/lrhunt/programs/kcorrect/data/templates/BESSEL_V.dat')
 #	kcorrect.load_filters('/home/lrhunt/programs/kcorrect/data/templates/BESSEL_U.dat')
+#
+#Commented out Absolute Magnitude loop to calculate absolute magnitude using corrected magnitudes
+#Commented out color and surface brightness calculations
+#Added corrections to go from AB to Vega magnitudes
+#Removed HI mass estimate calculations. If need to add later, find in Select_LCBG_BESSEL2.py
 
 import numpy as np
 import kcorrect
@@ -22,15 +27,17 @@ import kcorrect.utils as ut
 import numpy as np
 from astropy.cosmology import WMAP9 as cosmo
 
-
+print('Reading in LAMBDAR Catalog')
 
 filein='/home/lrhunt/CATALOGS/PHOT/LAMBDAR_MAG_R.txt'
 
 
 IDtot,RAtot,DECtot,utot,uerrtot,btot,berrtot,vtot,verrtot,rtot,rerrtot,itot,ierrtot,ztot,zerrtot,ktot,kerrtot,NUVtot,NUVerrtot,rh,zbesttot,zusetot,zphottot,SGCLASStot=np.loadtxt(filein,unpack=True)
 
+print('Selecting all galaxies between 0<z<1.2, Spectroscopic redshifts')
+
 ID=IDtot[np.where((zbesttot>0)&(zbesttot<1.2)&(zusetot<=2)&(SGCLASStot==0))[0]]
-RA=RAtot[np.where((zbesttot>0)&(zbesttot<1.3)&(zusetot<=2)&(SGCLASStot==0))[0]]
+RA=RAtot[np.where((zbesttot>0)&(zbesttot<1.2)&(zusetot<=2)&(SGCLASStot==0))[0]]
 DECL=DECtot[np.where((zbesttot>0)&(zbesttot<1.2)&(zusetot<=2)&(SGCLASStot==0))[0]]
 SGCLASS=SGCLASStot[np.where((zbesttot>0)&(zbesttot<1.2)&(zusetot<=2)&(SGCLASStot==0))[0]]
 umag=utot[np.where((zbesttot>0)&(zbesttot<1.2)&(zusetot<=2)&(SGCLASStot==0))[0]]
@@ -51,6 +58,8 @@ zphot=zphottot[np.where((zbesttot>0)&(zbesttot<1.2)&(zusetot<=2)&(SGCLASStot==0)
 rmag=rtot[np.where((zbesttot>0)&(zbesttot<1.2)&(zusetot<=2)&(SGCLASStot==0))[0]]
 rerr=rerrtot[np.where((zbesttot>0)&(zbesttot<1.2)&(zusetot<=2)&(SGCLASStot==0))[0]]
 rh=rh[np.where((zbesttot>0)&(zbesttot<1.2)&(zusetot<=2)&(SGCLASStot==0))[0]]
+
+print('Converting to maggies')
 
 umaggies=ut.mag2maggies(umag)
 kmaggies=ut.mag2maggies(kmag)
@@ -77,7 +86,9 @@ rmarr0=np.ndarray((len(bmaggies),7))
 rmarr0B=np.ndarray((len(bmaggies),7))
 rmarr0V=np.ndarray((len(bmaggies),7))
 rmarr0U=np.ndarray((len(bmaggies),7))
-print('Computing k-corrections')
+
+print('Computing k-corrections and estimated magnitudes')
+
 kcorrect.load_templates()
 kcorrect.load_filters('/home/lrhunt/programs/kcorrect/data/templates/Lum_Func_Filters_US.dat')
 
@@ -108,54 +119,53 @@ for i in range(0,len(carr)):
 
 kcorr=-2.5*np.log10(rmarr/rmarr0)
 kcorrM=-2.5*np.log10(rmarr/rmarr0B)
-corrB=-2.5*np.log10(rmarr0B)
-corrV=-2.5*np.log10(rmarr0V)
-corrU=-2.5*np.log10(rmarr0U)
+corrB=-2.5*np.log10(rmarr0B)+0.09
+corrV=-2.5*np.log10(rmarr0V)-0.02
+corrU=-2.5*np.log10(rmarr0U)-0.79
 
-M=np.zeros_like(zbest)
+print('Calculating Absolute Magnitudes')
+
+
+
+#M=np.zeros_like(zbest)
 bv=corrB[:,3]-corrV[:,4]
-for i in range(0,len(zbest)):
-	if zbest[i]<=0.1:
-		M[i]=bmag[i]-cosmo.distmod(zbest[i]).value-kcorrM[i][3]
-	if zbest[i]<=0.35 and zbest[i]>0.1:
-		M[i]=vmag[i]-cosmo.distmod(zbest[i]).value-kcorrM[i][4]
-	if zbest[i]<=0.55 and zbest[i]>0.35:
-		M[i]=rmag[i]-cosmo.distmod(zbest[i]).value-kcorrM[i][5]
-	if zbest[i]<=0.75 and zbest[i]>0.55:
-		M[i]=imag[i]-cosmo.distmod(zbest[i]).value-kcorrM[i][6]
-	if zbest[i]>0.75:
-		M[i]=zmag[i]-cosmo.distmod(zbest[i]).value-kcorrM[i][7]
+M=corrB[:,3]-cosmo.distmod(zbest).value
+#for i in range(0,len(zbest)):
+#	if zbest[i]<=0.1:
+#		M[i]=bmag[i]-cosmo.distmod(zbest[i]).value-kcorrM[i][3]
+#	if zbest[i]<=0.35 and zbest[i]>0.1:
+#		M[i]=vmag[i]-cosmo.distmod(zbest[i]).value-kcorrM[i][4]
+#	if zbest[i]<=0.55 and zbest[i]>0.35:
+#		M[i]=rmag[i]-cosmo.distmod(zbest[i]).value-kcorrM[i][5]
+#	if zbest[i]<=0.75 and zbest[i]>0.55:
+#		M[i]=imag[i]-cosmo.distmod(zbest[i]).value-kcorrM[i][6]
+#	if zbest[i]>0.75:
+#		M[i]=zmag[i]-cosmo.distmod(zbest[i]).value-kcorrM[i][7]
 
-SBe=np.zeros_like(bmag)
+print('Calculating Surface Brightness')
 
-for i in range(0,len(zbest)):
-     if zbest[i]<=0.1:
-          SBe[i]=bmag[i]-kcorrM[i][3]+0.753+2.5*np.log10(np.pi*np.power(rh[i]*0.03,2))-10*np.log10(1+zbest[i])
-     if zbest[i]<=0.35 and zbest[i]>0.1:
-          SBe[i]=vmag[i]-kcorrM[i][4]+0.753+2.5*np.log10(np.pi*np.power(rh[i]*0.03,2))-10*np.log10(1+zbest[i])
-     if zbest[i]<=0.55 and zbest[i]>0.35:
-          SBe[i]=rmag[i]-kcorrM[i][5]+0.753+2.5*np.log10(np.pi*np.power(rh[i]*0.03,2))-10*np.log10(1+zbest[i])
-     if zbest[i]<=0.75 and zbest[i]>0.55:
-          SBe[i]=imag[i]-kcorrM[i][6]+0.753+2.5*np.log10(np.pi*np.power(rh[i]*0.03,2))-10*np.log10(1+zbest[i])
-     if zbest[i]>0.75:
-          SBe[i]=zmag[i]-kcorrM[i][7]+0.753+2.5*np.log10(np.pi*np.power(rh[i]*0.03,2))-10*np.log10(1+zbest[i])
+#SBe=np.zeros_like(bmag)
+SBe=M+2.5*np.log10((2*np.pi*np.power(cosmo.angular_diameter_distance(zbest).value*np.tan(rh*0.03*4.84814e-6)*1e3,2)))+2.5*np.log10((360*60*60/(2*np.pi*0.01))**2)
+#for i in range(0,len(zbest)):
+#     if zbest[i]<=0.1:
+#          SBe[i]=bmag[i]-kcorrM[i][3]+0.753+2.5*np.log10(np.pi*np.power(rh[i]*0.03,2))-10*np.log10(1+zbest[i])
+#     if zbest[i]<=0.35 and zbest[i]>0.1:
+#          SBe[i]=vmag[i]-kcorrM[i][4]+0.753+2.5*np.log10(np.pi*np.power(rh[i]*0.03,2))-10*np.log10(1+zbest[i])
+#     if zbest[i]<=0.55 and zbest[i]>0.35:
+#          SBe[i]=rmag[i]-kcorrM[i][5]+0.753+2.5*np.log10(np.pi*np.power(rh[i]*0.03,2))-10*np.log10(1+zbest[i])
+#     if zbest[i]<=0.75 and zbest[i]>0.55:
+#          SBe[i]=imag[i]-kcorrM[i][6]+0.753+2.5*np.log10(np.pi*np.power(rh[i]*0.03,2))-10*np.log10(1+zbest[i])
+#     if zbest[i]>0.75:
+#          SBe[i]=zmag[i]-kcorrM[i][7]+0.753+2.5*np.log10(np.pi*np.power(rh[i]*0.03,2))-10*np.log10(1+zbest[i])
 
 print(bv)
 LCBGS=np.where((M<=-18.5)&(SBe<=21)&(bv<0.6))[0]
 
 LCBGS=np.ndarray.astype(LCBGS,dtype=int)
 #MSTAR=np.power(10,stellarmass)/(2*np.pi*(cosmo.kpc_proper_per_arcmin(zbest).value*rh*0.03*2/60)*cosmo.kpc_proper_per_arcmin(zbest).value*rh*0.03*2/60)
-MHIB=2.89-0.34*M
-MHID=8.17+1.32*np.log10(cosmo.kpc_proper_per_arcmin(zbest).value*rh*0.03*2/60)
-#MHINUVR=np.log10(np.power(10,stellarmass)*np.power(10,((-0.322*np.log10(MSTAR))-(0.234*(NUV-r06))+2.817)))
-stellarmass=np.zeros_like(MHID)
-MHINUVR=np.zeros_like(MHID)
-FLUXB=(np.power(10,MHIB)*1+zbest)/(236000*np.power(cosmo.luminosity_distance(zbest).value,2)*(15.625/1420405.7*(1+zbest)*300000)*np.sqrt(200/(15.625/1420405.7*(1+zbest)*300000)))
-FLUXD=(np.power(10,MHID)*1+zbest)/(236000*np.power(cosmo.luminosity_distance(zbest).value,2)*(15.625/1420405.7*(1+zbest)*300000)*np.sqrt(200/(15.625/1420405.7*(1+zbest)*300000)))
-FLUXNUVR=(np.power(10,MHINUVR)*1+zbest)/(236000*np.power(cosmo.luminosity_distance(zbest).value,2)*(15.625/1420405.7*(1+zbest)*300000)*np.sqrt(200/(15.625/1420405.7*(1+zbest)*300000)))
-RMSB=FLUXB/np.power(((7*rh*0.03)/6),2)
-RMSD=FLUXD/np.power(((7*rh*0.03)/6),2)
-RMSNUVR=FLUXNUVR/np.power(((7*rh*0.03)/6),2)
-LCBGFILEARRAY=np.stack((ID[LCBGS],RA[LCBGS],DECL[LCBGS],zbest[LCBGS],zuse[LCBGS],bmag[LCBGS],vmag[LCBGS],rh[LCBGS],stellarmass[LCBGS],MHIB[LCBGS],RMSB[LCBGS],MHID[LCBGS],RMSD[LCBGS],MHINUVR[LCBGS],RMSNUVR[LCBGS]),axis=-1)
-np.savetxt('COSMOS_LCBGS.txt',LCBGFILEARRAY,header='COSMOSID	RA	DEC	REDSHIFT	REDSHIFT_FLAG	m_{B}	m_{V}	RADIUS	STELLARMASS	MHIB	RMSB	MHID	RMSD	MHINUVR	RMSNUVR')
+
+LCBGFILEARRAY=np.stack((ID[LCBGS],RA[LCBGS],DECL[LCBGS],zbest[LCBGS],zuse[LCBGS],bmag[LCBGS],vmag[LCBGS],rh[LCBGS],corrU[LCBGS,3],corrB[LCBGS,3],corrV[LCBGS,3]),axis=-1)
+np.savetxt('COSMOS_LCBGS_VEGA.txt',LCBGFILEARRAY,header='COSMOSID	RA	DEC	REDSHIFT	REDSHIFT_FLAG	m_{B}	m_{V}	RADIUS	corrU	corrB	corrV')
+
+
 
