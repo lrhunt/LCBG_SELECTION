@@ -1,3 +1,5 @@
+#Changed calculation of Absolute Magnitude to reflect Ilbert et. al calculation including zero point offset LH 4/19/2017
+#Used Lange 2015 to convert F814W re to B re (log(RB)=0.108*log(lambda_814/lambda_B)+log(R814)===>RB=1.0659*R814 LH 4/18/2017
 #Remove K-Band, filter response may not be accurate, throws off other photometry. LH 2/21/2017
 #Lines changed at 62/63,70/75,91,98,103:
 #	allmaggies=np.stack((umaggies,kmaggies,bmaggies,vmaggies,rmaggies,imaggies,zmaggies),axis=-1)
@@ -127,25 +129,27 @@ print('Calculating Absolute Magnitudes')
 
 
 
-#M=np.zeros_like(zbest)
+M=np.zeros_like(zbest)
 bv=corrB[:,3]-corrV[:,4]
-M=corrB[:,3]-cosmo.distmod(zbest).value
-#for i in range(0,len(zbest)):
-#	if zbest[i]<=0.1:
-#		M[i]=bmag[i]-cosmo.distmod(zbest[i]).value-kcorrM[i][3]
-#	if zbest[i]<=0.35 and zbest[i]>0.1:
-#		M[i]=vmag[i]-cosmo.distmod(zbest[i]).value-kcorrM[i][4]
-#	if zbest[i]<=0.55 and zbest[i]>0.35:
-#		M[i]=rmag[i]-cosmo.distmod(zbest[i]).value-kcorrM[i][5]
-#	if zbest[i]<=0.75 and zbest[i]>0.55:
-#		M[i]=imag[i]-cosmo.distmod(zbest[i]).value-kcorrM[i][6]
-#	if zbest[i]>0.75:
-#		M[i]=zmag[i]-cosmo.distmod(zbest[i]).value-kcorrM[i][7]
+#M=corrB[:,3]-cosmo.distmod(zbest).value
+for i in range(0,len(zbest)):
+	if zbest[i]<=0.1:
+		M[i]=bmag[i]-0.05122-cosmo.distmod(zbest[i]).value-kcorrM[i][2]
+	if zbest[i]<=0.35 and zbest[i]>0.1:
+		M[i]=vmag[i]+0.069802-cosmo.distmod(zbest[i]).value-kcorrM[i][3]
+	if zbest[i]<=0.55 and zbest[i]>0.35:
+		M[i]=rmag[i]-0.01267-cosmo.distmod(zbest[i]).value-kcorrM[i][4]
+	if zbest[i]<=0.75 and zbest[i]>0.55:
+		M[i]=imag[i]-0.004512-cosmo.distmod(zbest[i]).value-kcorrM[i][5]
+	if zbest[i]>0.75:
+		M[i]=zmag[i]-0.00177-cosmo.distmod(zbest[i]).value-kcorrM[i][6]
+
+M=M+0.09
 
 print('Calculating Surface Brightness')
 
 #SBe=np.zeros_like(bmag)
-SBe=M+2.5*np.log10((2*np.pi*np.power(cosmo.angular_diameter_distance(zbest).value*np.tan(rh*0.03*4.84814e-6)*1e3,2)))+2.5*np.log10((360*60*60/(2*np.pi*0.01))**2)
+SBe=M+2.5*np.log10((2*np.pi*np.power(cosmo.angular_diameter_distance(zbest).value*np.tan(rh*0.03*4.84814e-6)*1.0659*1e3,2)))+2.5*np.log10((360*60*60/(2*np.pi*0.01))**2)
 #for i in range(0,len(zbest)):
 #     if zbest[i]<=0.1:
 #          SBe[i]=bmag[i]-kcorrM[i][3]+0.753+2.5*np.log10(np.pi*np.power(rh[i]*0.03,2))-10*np.log10(1+zbest[i])
